@@ -6,4 +6,23 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+	<ItemGroup>
+		<PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+		<PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+		<PackageReference Include="Serilog.Enrichers.Process" Version="3.0.0" />
+		<PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
+		<PackageReference Include="Serilog.Settings.Configuration" Version="9.0.0" />
+		<PackageReference Include="Serilog.Sinks.MongoDB" Version="7.2.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.11" />
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\NotificationsAPI.Application\NotificationsAPI.Application.csproj" />
+	  <ProjectReference Include="..\NotificationsAPI.Data\NotificationsAPI.Data.csproj" />
+	  <ProjectReference Include="..\NotificationsAPI.Domain\NotificationsAPI.Domain.csproj" />
+	  <ProjectReference Include="..\NotificationsAPI.Messaging\NotificationsAPI.Messaging.csproj" />
+	</ItemGroup>
+
 </Project>

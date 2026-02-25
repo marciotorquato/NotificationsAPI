@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36717.8 d17.14
+VisualStudioVersion = 17.14.36717.8
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "01 - Presentation", "01 - Presentation", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
@@ -26,6 +26,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationsAPI.Authentication", "src\NotificationsAPI.Authentication\NotificationsAPI.Authentication.csproj", "{8C202B0F-E1A2-4685-BC9B-8DBC853A70AC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationsAPI.IoC", "src\NotificationsAPI.IoC\NotificationsAPI.IoC.csproj", "{A350C5A6-89B3-460D-B399-9ACAB09F362C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationsAPI.Messaging", "src\NotificationsAPI.Messaging\NotificationsAPI.Messaging.csproj", "{5D7000F6-9ECA-4F5A-A4F5-E822CA056331}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,6 +59,10 @@ Global
 		{A350C5A6-89B3-460D-B399-9ACAB09F362C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A350C5A6-89B3-460D-B399-9ACAB09F362C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A350C5A6-89B3-460D-B399-9ACAB09F362C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D7000F6-9ECA-4F5A-A4F5-E822CA056331}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D7000F6-9ECA-4F5A-A4F5-E822CA056331}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D7000F6-9ECA-4F5A-A4F5-E822CA056331}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D7000F6-9ECA-4F5A-A4F5-E822CA056331}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -68,6 +74,7 @@ Global
 		{109D028D-0E5A-44E9-9F51-2494096CE81B} = {F58EEFE1-C593-410B-A3A5-29E70B129FE5}
 		{8C202B0F-E1A2-4685-BC9B-8DBC853A70AC} = {F58EEFE1-C593-410B-A3A5-29E70B129FE5}
 		{A350C5A6-89B3-460D-B399-9ACAB09F362C} = {AA72E495-47B4-4E00-B5DE-03AC07108E58}
+		{5D7000F6-9ECA-4F5A-A4F5-E822CA056331} = {F58EEFE1-C593-410B-A3A5-29E70B129FE5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4B3FF29C-1F07-4D44-AD80-0220B199F461}
