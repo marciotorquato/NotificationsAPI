@@ -12,6 +12,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Registrar toda infraestrutura (DbContext, Repositories, Services, RabbitMQ)
+builder.Services.AddInfrastructure(builder.Configuration);
+
 // Registrar RabbitMQ
 builder.Services.AddRabbitMQMessaging(builder.Configuration);
 

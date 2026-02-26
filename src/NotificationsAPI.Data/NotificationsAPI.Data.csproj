@@ -28,4 +28,9 @@
 	  <ProjectReference Include="..\NotificationsAPI.Domain\NotificationsAPI.Domain.csproj" />
 	</ItemGroup>
 
+
+	<ItemGroup>
+	  <Folder Include="Migrations\" />
+	</ItemGroup>
+
 </Project>

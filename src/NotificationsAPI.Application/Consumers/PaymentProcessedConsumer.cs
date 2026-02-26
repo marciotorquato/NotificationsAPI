@@ -6,29 +6,44 @@ namespace NotificationsAPI.Application.Consumers;
 public class PaymentProcessedConsumer
 {
     private readonly ILogger<PaymentProcessedConsumer> _logger;
+    private readonly NotificationService _notificationService;
 
-    public PaymentProcessedConsumer(ILogger<PaymentProcessedConsumer> logger)
+    public PaymentProcessedConsumer(
+        ILogger<PaymentProcessedConsumer> logger,
+        NotificationService notificationService)
     {
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     public async Task ProcessAsync(PaymentProcessedEvent paymentEvent)
     {
         _logger.LogInformation(
-            "📧 NOTIFICAÇÃO DISPARADA | UsuarioId: {UsuarioId} | GameId: {GameId} | Status: {Status}",
+            "🎯 CONSUMER EXECUTADO | UsuarioId: {UsuarioId} | GameId: {GameId} | Status: {Status}",
             paymentEvent.UsuarioId,
             paymentEvent.GameId,
             paymentEvent.Status);
 
         try
         {
-            await Task.Delay(100);
-
-            _logger.LogInformation("Notificação enviada com sucesso | UsuarioId: {UsuarioId}", paymentEvent.UsuarioId);
+            if (paymentEvent.Status.Equals("Aprovado", StringComparison.OrdinalIgnoreCase))
+            {
+                await _notificationService.EnviarNotificacaoConfirmacaoCompraAsync(
+                    paymentEvent.UsuarioId,
+                    paymentEvent.GameId);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "⚠️ Pagamento não aprovado. Notificação não enviada | Status: {Status}",
+                    paymentEvent.Status);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao enviar notificação | UsuarioId: {UsuarioId}", paymentEvent.UsuarioId);
+            _logger.LogError(ex,
+                "❌ Erro ao processar PaymentProcessed | UsuarioId: {UsuarioId}",
+                paymentEvent.UsuarioId);
             throw;
         }
     }

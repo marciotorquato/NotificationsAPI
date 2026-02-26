@@ -7,9 +7,7 @@ namespace NotificationsAPI.IoC;
 
 public static class RabbitMQExtensions
 {
-    public static IServiceCollection AddRabbitMQMessaging(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static IServiceCollection AddRabbitMQMessaging(this IServiceCollection services, IConfiguration configuration)
     {
         // Registrar o inicializador
         services.AddSingleton<RabbitMQInitializer>();
@@ -18,7 +16,7 @@ public static class RabbitMQExtensions
         services.AddScoped<PaymentProcessedConsumer>();
 
         // Registrar Background Service
-        services.AddHostedService<RabbitMQConsumer>();
+        services.AddHostedService<PaymentProcessedRabbitMQConsumer>();
 
         return services;
     }

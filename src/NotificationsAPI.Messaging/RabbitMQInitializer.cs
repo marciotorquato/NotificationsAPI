@@ -31,6 +31,38 @@ public class RabbitMQInitializer
             await using var connection = await factory.CreateConnectionAsync();
             await using var channel = await connection.CreateChannelAsync();
 
+            var userCreatedExchange = _configuration["RabbitMQ:Exchanges:UserCreated"] ?? "user-created-exchange";
+
+            await channel.ExchangeDeclareAsync(
+                exchange: userCreatedExchange,
+                type: ExchangeType.Fanout,
+                durable: true,
+                autoDelete: false,
+                arguments: null
+            );
+
+            var userCreatedQueue = "user-created-queue-notifications";
+            await channel.QueueDeclareAsync(
+                queue: userCreatedQueue,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null
+            );
+
+            await channel.QueueBindAsync(
+                queue: userCreatedQueue,
+                exchange: userCreatedExchange,
+                routingKey: "",
+                arguments: null
+            );
+
+            _logger.LogInformation(
+                "RabbitMQ UserCreated configurado | Exchange: {Exchange} | Queue: {Queue}",
+                userCreatedExchange,
+                userCreatedQueue);
+
+            // ===== PAYMENT PROCESSED =====
             var paymentProcessedExchange = _configuration["RabbitMQ:Exchanges:PaymentProcessed"] ?? "payment-processed-exchange";
 
             await channel.ExchangeDeclareAsync(
@@ -58,7 +90,7 @@ public class RabbitMQInitializer
             );
 
             _logger.LogInformation(
-                "RabbitMQ inicializado | Exchange: {Exchange} | Queue: {Queue}",
+                "RabbitMQ PaymentProcessed configurado | Exchange: {Exchange} | Queue: {Queue}",
                 paymentProcessedExchange,
                 notificationsQueue);
         }

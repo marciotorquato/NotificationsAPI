@@ -11,18 +11,15 @@ using System.Text.Json;
 
 namespace NotificationsAPI.Messaging;
 
-public class RabbitMQConsumer : BackgroundService
+public class PaymentProcessedRabbitMQConsumer : BackgroundService
 {
     private readonly IConfiguration _configuration;
-    private readonly ILogger<RabbitMQConsumer> _logger;
+    private readonly ILogger<PaymentProcessedRabbitMQConsumer> _logger;
     private readonly IServiceProvider _serviceProvider;
     private IConnection _connection;
     private IChannel _channel;
 
-    public RabbitMQConsumer(
-        IConfiguration configuration,
-        ILogger<RabbitMQConsumer> logger,
-        IServiceProvider serviceProvider)
+    public PaymentProcessedRabbitMQConsumer(IConfiguration configuration, ILogger<PaymentProcessedRabbitMQConsumer> logger, IServiceProvider serviceProvider)
     {
         _configuration = configuration;
         _logger = logger;
@@ -58,10 +55,7 @@ public class RabbitMQConsumer : BackgroundService
                     var body = ea.Body.ToArray();
                     var message = Encoding.UTF8.GetString(body);
 
-                    _logger.LogInformation(
-                        "🟢 Mensagem Recebida | Queue: {Queue} | Body: {Message}",
-                        queueName,
-                        message);
+                    _logger.LogInformation("Mensagem Recebida | Queue: {Queue} | Body: {Message}", queueName, message);
 
                     var paymentEvent = JsonSerializer.Deserialize<PaymentProcessedEvent>(message, new JsonSerializerOptions
                     {
@@ -76,17 +70,17 @@ public class RabbitMQConsumer : BackgroundService
                         await notificationConsumer.ProcessAsync(paymentEvent);
 
                         await _channel.BasicAckAsync(ea.DeliveryTag, false);
-                        _logger.LogInformation("✅ Mensagem Processada e ACK enviado");
+                        _logger.LogInformation("Mensagem Processada e ACK enviado");
                     }
                     else
                     {
-                        _logger.LogWarning("⚠️ Falha ao deserializar mensagem");
+                        _logger.LogWarning("Falha ao deserializar mensagem");
                         await _channel.BasicNackAsync(ea.DeliveryTag, false, false);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "❌ Erro ao processar mensagem");
+                    _logger.LogError(ex, "Erro ao processar mensagem");
 
                     try
                     {
@@ -106,7 +100,7 @@ public class RabbitMQConsumer : BackgroundService
                 cancellationToken: stoppingToken
             );
 
-            _logger.LogInformation("✅ RabbitMQ Consumer iniciado | Queue: {Queue}", queueName);
+            _logger.LogInformation("RabbitMQ Consumer iniciado | Queue: {Queue}", queueName);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -119,7 +113,7 @@ public class RabbitMQConsumer : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Erro fatal no RabbitMQ Consumer");
+            _logger.LogError(ex, "Erro fatal no RabbitMQ Consumer");
             throw;
         }
     }
