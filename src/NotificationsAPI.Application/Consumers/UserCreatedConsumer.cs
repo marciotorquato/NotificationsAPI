@@ -24,8 +24,7 @@ public class UserCreatedConsumer
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao processar UserCreated | UsuarioId: {UsuarioId}",
-                userEvent.UsuarioId);
+            _logger.LogError(ex, "Erro ao processar UserCreated | UsuarioId: {UsuarioId}", userEvent.UsuarioId);
             throw;
         }
     }

@@ -4,10 +4,7 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -18,9 +15,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Registrar RabbitMQ
 builder.Services.AddRabbitMQMessaging(builder.Configuration);
 
-// Configurar Serilog (opcional)
-builder.Host.UseSerilog((context, configuration) =>
-    configuration.ReadFrom.Configuration(context.Configuration));
+// Configurar Serilog
+builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
+
 
 var app = builder.Build();
 

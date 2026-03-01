@@ -63,7 +63,7 @@ public class NotificationDbContext : DbContext
                 .HasMaxLength(2000)
                 .IsRequired(false);
 
-            // Índices para performance
+            // Índices
             entity.HasIndex(e => e.UsuarioId);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.DataCriacao);

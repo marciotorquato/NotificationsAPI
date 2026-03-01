@@ -12,7 +12,7 @@ public static class RabbitMQExtensions
         // Registrar o inicializador
         services.AddSingleton<RabbitMQInitializer>();
 
-        // Registrar o Consumer como Scoped
+        // Registrar o Consumer
         services.AddScoped<PaymentProcessedConsumer>();
 
         // Registrar Background Service

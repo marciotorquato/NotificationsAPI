@@ -1,11 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NotificationsAPI.Domain.Entities;
 using NotificationsAPI.Domain.Interfaces.Repository;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NotificationsAPI.Data.Repositories;
 
@@ -38,9 +33,6 @@ public class NotificationRepository : INotificationRepository
 
     public async Task<IEnumerable<Notification>> GetByUsuarioIdAsync(Guid usuarioId)
     {
-        return await _context.Notifications
-            .Where(n => n.UsuarioId == usuarioId)
-            .OrderByDescending(n => n.DataCriacao)
-            .ToListAsync();
+        return await _context.Notifications.Where(n => n.UsuarioId == usuarioId).OrderByDescending(n => n.DataCriacao).ToListAsync();
     }
 }

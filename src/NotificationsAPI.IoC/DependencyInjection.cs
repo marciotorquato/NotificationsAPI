@@ -28,6 +28,7 @@ public static class DependencyInjection
                 });
         });
 
+
         // Repositories
         services.AddScoped<INotificationRepository, NotificationRepository>();
 

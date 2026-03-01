@@ -10,9 +10,7 @@ public class NotificationService
     private readonly ILogger<NotificationService> _logger;
     private readonly NotificationDbContext _context;
 
-    public NotificationService(
-        ILogger<NotificationService> logger,
-        NotificationDbContext context)
+    public NotificationService(ILogger<NotificationService> logger, NotificationDbContext context)
     {
         _logger = logger;
         _context = context;
@@ -20,7 +18,6 @@ public class NotificationService
 
     public async Task EnviarNotificacaoBoasVindasAsync(Guid usuarioId)
     {
-        // ✅ Email genérico (você pode buscar do UsersAPI se necessário)
         var email = $"usuario-{usuarioId}@example.com";
 
         var notification = new Notification
@@ -41,12 +38,9 @@ public class NotificationService
 
         try
         {
-            _logger.LogInformation(
-                "📧 ENVIANDO E-MAIL DE BOAS-VINDAS | UsuarioId: {UsuarioId} | Para: {Email}",
-                usuarioId,
-                email);
+            _logger.LogInformation("ENVIANDO E-MAIL DE BOAS-VINDAS | UsuarioId: {UsuarioId} | Para: {Email}", usuarioId, email);
 
-            await Task.Delay(100); // Simula envio
+            await Task.Delay(100); // Simular envio
 
             notification.Status = StatusNotificacao.Enviado;
             notification.DataEnvio = DateTimeOffset.UtcNow;
@@ -54,7 +48,7 @@ public class NotificationService
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("✅ E-mail de boas-vindas enviado com sucesso");
+            _logger.LogInformation("E-mail de boas-vindas enviado com sucesso");
         }
         catch (Exception ex)
         {
@@ -64,14 +58,12 @@ public class NotificationService
 
             await _context.SaveChangesAsync();
 
-            _logger.LogError(ex, "❌ Erro ao enviar e-mail de boas-vindas");
+            _logger.LogError(ex, "Erro ao enviar e-mail de boas-vindas");
             throw;
         }
     }
 
-    public async Task EnviarNotificacaoConfirmacaoCompraAsync(
-        Guid usuarioId,
-        Guid gameId)
+    public async Task EnviarNotificacaoConfirmacaoCompraAsync(Guid usuarioId, Guid gameId)
     {
         var email = $"usuario-{usuarioId}@example.com";
 
@@ -93,11 +85,9 @@ public class NotificationService
 
         try
         {
-            _logger.LogInformation(
-                "📧 ENVIANDO E-MAIL DE CONFIRMAÇÃO | UsuarioId: {UsuarioId}",
-                usuarioId);
+            _logger.LogInformation("ENVIANDO E-MAIL DE CONFIRMAÇÃO | UsuarioId: {UsuarioId}", usuarioId);
 
-            await Task.Delay(100);
+            await Task.Delay(100); // simular envio
 
             notification.Status = StatusNotificacao.Enviado;
             notification.DataEnvio = DateTimeOffset.UtcNow;
@@ -105,7 +95,7 @@ public class NotificationService
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("✅ E-mail de confirmação enviado");
+            _logger.LogInformation("E-mail de confirmação enviado");
         }
         catch (Exception ex)
         {
@@ -115,7 +105,7 @@ public class NotificationService
 
             await _context.SaveChangesAsync();
 
-            _logger.LogError(ex, "❌ Erro ao enviar e-mail de confirmação");
+            _logger.LogError(ex, "Erro ao enviar e-mail de confirmação");
             throw;
         }
     }
