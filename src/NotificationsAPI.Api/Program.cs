@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using NotificationsAPI.Data;
 using NotificationsAPI.IoC;
 using NotificationsAPI.Messaging;
 using Serilog;
@@ -5,30 +7,22 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
-builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApi();builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Registrar toda infraestrutura (DbContext, Repositories, Services, RabbitMQ)
 builder.Services.AddInfrastructure(builder.Configuration);
-
-// Registrar RabbitMQ
 builder.Services.AddRabbitMQMessaging(builder.Configuration);
 
-// Configurar Serilog
 builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
-
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Inicializar RabbitMQ
 try
 {
     using var scope = app.Services.CreateScope();
@@ -41,6 +35,18 @@ catch (Exception ex)
     throw;
 }
 
+try
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+    db.Database.Migrate();
+    Log.Information("Migrations aplicadas com sucesso.");
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Erro ao aplicar migrations");
+    throw;
+}
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
