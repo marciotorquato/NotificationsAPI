@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notifications-api-configmap
+data:
+  ASPNETCORE_ENVIRONMENT: "Development"
+  RabbitMQ__Host: "rabbitmq-service"
+  RabbitMQ__Username: "admin"
+  Serilog__WriteTo__0__Args__databaseUrl: "mongodb://root:root@mongodb-service:27017/logs_dev?authSource=admin"
