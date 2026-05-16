@@ -6,6 +6,7 @@ using NotificationsAPI.Application.Consumers;
 using NotificationsAPI.Data;
 using NotificationsAPI.Data.Repositories;
 using NotificationsAPI.Domain.Interfaces.Repository;
+using NotificationsAPI.Messaging;
 
 namespace NotificationsAPI.IoC;
 
@@ -37,6 +38,11 @@ public static class DependencyInjection
         // Consumers
         services.AddScoped<PaymentProcessedConsumer>();
         services.AddScoped<UserCreatedConsumer>();
+
+        // RabbitMQ
+        services.AddSingleton<RabbitMQInitializer>();
+        services.AddHostedService<PaymentProcessedRabbitMQConsumer>();
+        services.AddHostedService<UserCreatedRabbitMQConsumer>();
 
         return services;
     }
