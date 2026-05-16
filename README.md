@@ -1,140 +1,168 @@
-# 🔔 NotificationsAPI — FCG FIAP Cloud Games
+# NotificationsAPI - Serverless com RabbitMQ e LocalStack
 
-Microsserviço responsável pelo **envio de notificações** da plataforma FIAP Cloud Games. Não expõe endpoints HTTP — opera exclusivamente via eventos RabbitMQ, logando as notificações no console.
+Microsservico responsavel pelo envio de notificacoes da plataforma FIAP Cloud Games.
 
----
+Nesta versao, a NotificationsAPI nao roda mais como um container de worker continuamente ativo. O processamento foi migrado para uma funcao serverless (`NotificationsAPI.Function`) publicada no LocalStack e acionada por mensagens do RabbitMQ.
 
-## 🧱 Tecnologias
+## Tecnologias
 
 - .NET 9
-- SQL Server (dados relacionais)
-- MongoDB (logs via Serilog)
-- RabbitMQ (consumo de eventos)
+- AWS Lambda custom runtime no LocalStack
+- RabbitMQ como broker de mensageria
+- SQL Server para persistencia
+- Serilog para logs
 
----
+Observacao: referencias nao utilizadas de AutoMapper foram removidas para eliminar o alerta NuGet `NU1903` de vulnerabilidade no pacote `AutoMapper 12.0.1`.
 
-## ⚡ Como Funciona
+## Arquitetura
 
-A NotificationsAPI é um serviço orientado a eventos. Ela não possui endpoints HTTP — todo o seu fluxo é acionado por mensagens do RabbitMQ. Ao receber um evento, loga a notificação no console (simulando o envio de e-mail).
-
-```
+```text
 UsersAPI
-  └── publica → user-created-exchange
-        └── NotificationsAPI consome → loga e-mail de boas-vindas
+  publica -> user-created-exchange
+             -> user-created-queue-notifications
+                -> trigger RabbitMQ
+                   -> Lambda NotificationsAPI.Function
 
 PaymentsAPI
-  └── publica → payment-processed-exchange
-        └── NotificationsAPI consome → loga resultado do pagamento
+  publica -> payment-processed-exchange
+             -> payment-processed-queue-notifications
+                -> trigger RabbitMQ
+                   -> Lambda NotificationsAPI.Function
 ```
 
----
+No AWS real, o desenho equivalente usa Lambda Event Source Mapping para Amazon MQ/RabbitMQ. No ambiente local, o LocalStack Community nao possui event source mapping nativo para RabbitMQ; por isso o repositorio inclui um emulador de trigger em `scripts/rabbitmq-lambda-trigger.js`. Ele consome as filas RabbitMQ, monta o payload padrao `aws:rmq` da Lambda e invoca a funcao no LocalStack. Assim, o container antigo da NotificationsAPI continua substituido por uma funcao serverless.
 
-## 📨 Eventos Consumidos
+## Eventos Consumidos
 
-| Exchange | Fila | Notificação Enviada |
-|---|---|---|
-| `user-created-exchange` | `user-created-queue-notifications` | E-mail de boas-vindas ao novo usuário |
-| `payment-processed-exchange` | `payment-processed-queue-notifications` | E-mail com resultado do pagamento (aprovado ou rejeitado) |
+| Exchange | Fila | Evento | Acao |
+|---|---|---|---|
+| `user-created-exchange` | `user-created-queue-notifications` | `UserCreatedEvent` | Notificacao de boas-vindas |
+| `payment-processed-exchange` | `payment-processed-queue-notifications` | `PaymentProcessedEvent` | Notificacao de confirmacao de compra quando aprovado |
 
----
+## Rodando Localmente
 
-## 🔄 Fluxo de Notificações
+### Pre-requisitos
 
-**Boas-vindas:**
-1. Usuário se cadastra na UsersAPI
-2. UsersAPI publica `UserCreatedEvent`
-3. NotificationsAPI consome e loga e-mail de boas-vindas
+- Docker Desktop em execucao
+- PowerShell
+- Acesso para baixar imagens Docker na primeira execucao
 
-**Resultado de pagamento:**
-1. PaymentsAPI processa pagamento e publica `PaymentProcessedEvent`
-2. NotificationsAPI consome e loga e-mail com resultado (aprovado ou rejeitado)
+### 1. Deploy da Lambda no LocalStack
 
----
-
-## 🗃️ Banco de Dados
-
-| Configuração | Valor |
-|---|---|
-| Connection String | `MS_NotificationsAPI` |
-| Database | `MS_NotificationsAPI` |
-
----
-
-## 🐳 Rodando Localmente (Docker Compose)
-
-Este serviço faz parte da orquestração central. Para rodar o ambiente completo:
-
-```bash
-# Clone todos os repositórios na mesma pasta pai
-git clone https://github.com/pablosdlima/OrchestrationApi
-git clone https://github.com/marciotorquato/NotificationsAPI
-
-# Suba o ambiente
-cd OrchestrationAPI
-docker compose up --build
+```powershell
+.\scripts\build-deploy-localstack.ps1
 ```
 
-> ℹ️ Este serviço não possui Swagger pois não expõe endpoints HTTP. Para ver as notificações logadas, acompanhe os logs do container:
+Esse script:
 
-```bash
-docker logs -f notifications-api
+- sobe LocalStack, SQL Server e RabbitMQ;
+- cria exchanges, filas e bindings no RabbitMQ;
+- publica o projeto `src/NotificationsAPI.Function`;
+- cria ou atualiza a Lambda `notifications-api-function` no LocalStack.
+- configura a connection string da Lambda para usar SQL Server no Docker.
+
+### 2. Iniciar o trigger RabbitMQ -> Lambda
+
+```powershell
+.\scripts\start-rabbitmq-lambda-trigger.ps1
 ```
 
----
+Deixe esse processo aberto durante os testes locais. Ele representa o poller gerenciado que a AWS executa por tras do Event Source Mapping de Amazon MQ/RabbitMQ.
 
-## ☸️ Rodando com Kubernetes
+### 3. Enviar mensagens de teste
 
-### Pré-requisitos
+Em outro terminal:
 
-- Docker Desktop com **Kubernetes habilitado**
-- `kubectl` disponível no terminal
-- Infraestrutura já aplicada via OrchestrationAPI
-
-### Estrutura dos manifestos
-
-```
-NotificationsAPI/
-└── k8s/
-    ├── configmap.yaml   ← variáveis não sensíveis
-    ├── secret.yaml      ← variáveis sensíveis (Base64)
-    ├── deployment.yaml  ← gerencia os Pods
-    └── service.yaml     ← expõe o serviço na rede
+```powershell
+.\scripts\send-test-messages.ps1
 ```
 
-### 1. Aplicar os manifestos
+O script publica mensagens nos exchanges RabbitMQ. O trigger local consome, invoca a Lambda e envia ACK somente quando a funcao processa com sucesso.
 
-```bash
-# Na raiz do repositório NotificationsAPI
-kubectl apply -f k8s/
+## SQL Server
+
+A NotificationsAPI persiste as notificacoes no SQL Server usando Entity Framework Core.
+
+- Container: `notifications-sqlserver`
+- Porta local: `14333`
+- Porta interna Docker: `1433`
+- Banco: `MS_NotificationsAPI`
+- Usuario: `sa`
+- Senha: `Fiap@12345`
+
+Connection string usada pela Lambda no LocalStack:
+
+```text
+Server=sqlserver,1433;Database=MS_NotificationsAPI;User Id=sa;Password=Fiap@12345;TrustServerCertificate=True
 ```
 
-### 2. Verificar se está rodando
+O nome `sqlserver` funciona porque a Lambda executa na rede Docker `fiap-notifications-local`.
 
-```bash
-kubectl get pods
+## RabbitMQ
+
+- Management UI: `http://localhost:15672`
+- Usuario: `admin`
+- Senha: `admin`
+
+## Validacao do LocalStack
+
+Verificar se o container esta ativo:
+
+```powershell
+docker ps --filter "name=localstack"
 ```
 
-### 3. Monitorar as notificações
+Verificar health dos servicos:
 
-```bash
-# Ver logs do serviço em tempo real
-kubectl logs -f notifications-api-xxx
-
-# Ou acesse o painel do RabbitMQ para ver os eventos
-http://localhost:30072
+```powershell
+Invoke-RestMethod -Uri http://localhost:4566/_localstack/health | ConvertTo-Json -Depth 5
 ```
 
-> ℹ️ Substitua `notifications-api-xxx` pelo nome real do Pod obtido via `kubectl get pods`.
+Listar a Lambda publicada:
 
-### Parar o serviço
-
-```bash
-kubectl delete -f k8s/
+```powershell
+docker exec localstack awslocal lambda list-functions
 ```
 
----
+Resultado esperado:
 
-## 🎓 Contexto Acadêmico
+```text
+notifications-api-function
+```
 
-Desenvolvido para o **Tech Challenge Fase 2 — PosTech FIAP**
-Arquitetura de Software em .NET com Azure.
+## Validacao do Build
+
+Caso o .NET SDK nao esteja instalado localmente, o build pode ser validado via Docker:
+
+```powershell
+docker run --rm -v "${PWD}:/src" -w /src mcr.microsoft.com/dotnet/sdk:9.0 dotnet build NotificationsAPI.sln
+```
+
+Resultado esperado:
+
+```text
+Build succeeded.
+```
+
+Se o VS Code/C# Dev Kit mostrar erro de restore, confirme se o .NET 9 SDK esta instalado no Windows ou use o comando Docker acima.
+
+## Observacao sobre LocalStack
+
+O handler da funcao usa o payload oficial de RabbitMQ para Lambda:
+
+```json
+{
+  "eventSource": "aws:rmq",
+  "rmqMessagesByQueue": {
+    "user-created-queue-notifications::/": [
+      {
+        "basicProperties": {},
+        "redelivered": false,
+        "data": "base64-do-json"
+      }
+    ]
+  }
+}
+```
+
+Isso mantem a funcao alinhada ao formato esperado por Amazon MQ/RabbitMQ em Lambda, enquanto o ambiente local usa LocalStack para execucao da funcao e RabbitMQ local como broker.

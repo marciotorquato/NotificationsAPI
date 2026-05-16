@@ -1,0 +1,61 @@
+Roteiro para apresentacao em video
+
+Ola, neste video vou apresentar a migracao da NotificationsAPI para uma arquitetura serverless, mantendo o RabbitMQ como sistema de mensageria e utilizando LocalStack para simular a execucao da funcao Lambda localmente.
+
+A NotificationsAPI e o microsservico responsavel por processar eventos da plataforma FIAP Cloud Games e gerar notificacoes, como mensagem de boas-vindas para novos usuarios e confirmacao de compra quando um pagamento e aprovado.
+
+Antes da migracao, esse servico funcionava como um container ou worker executando continuamente. Ele ficava conectado ao RabbitMQ, consumindo mensagens das filas o tempo todo por meio de background services.
+
+Com a refatoracao, esse modelo foi substituido por uma funcao serverless. Agora, a NotificationsAPI nao precisa mais manter um container ativo aguardando mensagens. O processamento foi movido para o projeto NotificationsAPI.Function, que e publicado como uma funcao Lambda no LocalStack.
+
+A arquitetura final ficou da seguinte forma: a UsersAPI publica eventos no exchange user-created-exchange, que entrega mensagens para a fila user-created-queue-notifications. Ja a PaymentsAPI publica eventos no exchange payment-processed-exchange, ligado a fila payment-processed-queue-notifications.
+
+Quando uma nova mensagem chega em uma dessas filas, o trigger RabbitMQ aciona a funcao serverless da NotificationsAPI. A funcao identifica de qual fila veio a mensagem, desserializa o evento correspondente e chama o consumer correto da aplicacao.
+
+Para eventos de usuario criado, a funcao chama o UserCreatedConsumer, responsavel por gerar a notificacao de boas-vindas. Para eventos de pagamento processado, ela chama o PaymentProcessedConsumer, que gera a notificacao de confirmacao de compra quando o pagamento esta aprovado.
+
+A persistencia das notificacoes continua sendo feita em SQL Server, usando Entity Framework Core. No ambiente local, o banco roda no container notifications-sqlserver, com o banco MS_NotificationsAPI. A Lambda acessa esse banco pela connection string configurada no deploy, usando o endereco interno Docker sqlserver:1433.
+
+No ambiente local, usamos o LocalStack para simular a AWS Lambda. A funcao e publicada com runtime customizado provided.al2023, e os recursos necessarios, como bucket S3, role IAM e funcao Lambda, sao criados automaticamente pelo script de deploy.
+
+Um ponto importante e que mantivemos o RabbitMQ como broker de mensageria. No AWS real, esse desenho seria feito com Lambda Event Source Mapping para Amazon MQ com RabbitMQ. Como o LocalStack Community nao oferece trigger nativo de RabbitMQ, foi criado um emulador local de trigger.
+
+Esse emulador fica no arquivo rabbitmq-lambda-trigger.js. Ele consome mensagens das filas RabbitMQ, monta o payload no formato padrao aws:rmq esperado pela Lambda e invoca a funcao no LocalStack. Apos a funcao processar com sucesso, o trigger envia o ACK para o RabbitMQ.
+
+Para executar o ambiente, primeiro rodamos:
+
+.\scripts\build-deploy-localstack.ps1
+
+Esse script sobe o LocalStack, SQL Server e RabbitMQ, cria os exchanges, filas e bindings no RabbitMQ, publica o projeto NotificationsAPI.Function e cria ou atualiza a Lambda notifications-api-function.
+
+Depois, em outro terminal, iniciamos o trigger RabbitMQ para Lambda:
+
+.\scripts\start-rabbitmq-lambda-trigger.ps1
+
+Esse processo deve ficar aberto durante os testes, pois representa o poller que, em producao, seria gerenciado pela AWS.
+
+Em seguida, para validar o fluxo completo, enviamos mensagens de teste com:
+
+.\scripts\send-test-messages.ps1
+
+Esse script publica mensagens nos exchanges do RabbitMQ. O trigger local consome as mensagens, invoca a Lambda no LocalStack, a funcao processa os eventos, salva as notificacoes no SQL Server e envia o ACK ao RabbitMQ.
+
+Tambem podemos validar o LocalStack acessando o health check em http://localhost:4566/_localstack/health ou executando:
+
+docker exec localstack awslocal lambda list-functions
+
+O resultado esperado e encontrar a funcao notifications-api-function.
+
+Para acompanhar o RabbitMQ, podemos acessar a interface de gerenciamento em:
+
+http://localhost:15672
+
+com usuario admin e senha admin.
+
+A solucao tambem foi validada com restore e build. As referencias nao utilizadas de AutoMapper foram removidas do projeto Domain, eliminando o alerta NuGet NU1903 de vulnerabilidade no AutoMapper 12.0.1. O build final foi validado via Docker com SDK .NET 9 e concluiu com sucesso.
+
+Com essa migracao, a NotificationsAPI deixa de depender de um container rodando continuamente para processar mensagens. O processamento passa a acontecer sob demanda, orientado por eventos, usando uma funcao serverless.
+
+O resultado e uma arquitetura mais otimizada, com melhor uso de recursos, mantendo o RabbitMQ como tecnologia de mensageria e o SQL Server como banco de dados da aplicacao.
+
+Finalizando, a solucao atende ao objetivo proposto: refatorar a NotificationsAPI para uma funcao serverless com LocalStack, acionada por mensagens do RabbitMQ, substituindo o container continuo por execucao sob demanda.

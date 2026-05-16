@@ -1,0 +1,76 @@
+Resumo Para Executar
+
+1 - Fazer deploy da Lambda no LocalStack:
+
+.\scripts\build-deploy-localstack.ps1
+
+Esse comando sobe:
+
+- LocalStack
+- RabbitMQ
+- SQL Server
+
+E cria/atualiza a Lambda:
+
+notifications-api-function
+
+
+2 - Iniciar o trigger RabbitMQ -> Lambda:
+
+.\scripts\start-rabbitmq-lambda-trigger.ps1
+
+Deixe esse terminal aberto.
+
+
+3 - Em outro terminal, enviar mensagens de teste:
+
+.\scripts\send-test-messages.ps1
+
+
+4 - Validar LocalStack:
+
+docker exec localstack awslocal lambda list-functions
+
+Resultado esperado:
+
+notifications-api-function
+
+
+5 - Validar build da solucao:
+
+docker run --rm -v "${PWD}:/src" -w /src mcr.microsoft.com/dotnet/sdk:9.0 dotnet build NotificationsAPI.sln
+
+Resultado esperado:
+
+Build succeeded.
+
+Observacao: as referencias nao utilizadas de AutoMapper foram removidas para eliminar o alerta NuGet NU1903.
+
+
+6 - Acessar RabbitMQ UI:
+
+http://localhost:15672
+
+Usuario: admin
+Senha: admin
+
+
+7 - SQL Server:
+
+Servidor: localhost,14333
+Banco: MS_NotificationsAPI
+Usuario: sa
+Senha: Fiap@12345
+
+
+8 - Fluxo final:
+
+RabbitMQ -> Trigger local -> Lambda LocalStack -> SQL Server
+
+
+9 - Validacao no terminal do trigger:
+
+Se tudo estiver correto, o terminal do trigger mostrara mensagens como:
+
+Mensagem recebida do RabbitMQ
+Mensagem processada pela Lambda e ACK enviada

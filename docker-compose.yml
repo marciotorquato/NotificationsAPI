@@ -1,6 +1,38 @@
-version: '3.9'
-
 services:
+  localstack:
+    image: localstack/localstack:3.8.1
+    container_name: localstack
+    restart: unless-stopped
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: lambda,logs,iam,s3
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      LAMBDA_DOCKER_NETWORK: fiap-notifications-local
+      DEBUG: "1"
+    volumes:
+      - localstack-data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - fiap-notifications-local
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: notifications-sqlserver
+    restart: unless-stopped
+    ports:
+      - "14333:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Fiap@12345"
+      MSSQL_PID: "Developer"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - fiap-notifications-local
+
   mongodb:
     image: mongo:7
     container_name: mongo-fiap-cloud-games
@@ -10,6 +42,8 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: root
+    networks:
+      - fiap-notifications-local
 
   mongo-express:
     image: mongo-express:1.0.0
@@ -23,6 +57,8 @@ services:
       ME_CONFIG_MONGODB_SERVER: mongodb
       ME_CONFIG_BASICAUTH_USERNAME: admin
       ME_CONFIG_BASICAUTH_PASSWORD: admin
+    networks:
+      - fiap-notifications-local
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -34,5 +70,13 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin
+    networks:
+      - fiap-notifications-local
 
-      
+volumes:
+  localstack-data:
+  sqlserver-data:
+
+networks:
+  fiap-notifications-local:
+    name: fiap-notifications-local
