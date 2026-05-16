@@ -14,9 +14,11 @@ public static class RabbitMQExtensions
 
         // Registrar o Consumer
         services.AddScoped<PaymentProcessedConsumer>();
+        services.AddScoped<UserCreatedConsumer>();
 
         // Registrar Background Service
         services.AddHostedService<PaymentProcessedRabbitMQConsumer>();
+        services.AddHostedService<UserCreatedRabbitMQConsumer>();
 
         return services;
     }
