@@ -23,6 +23,18 @@ const lambda = new LambdaClient({
   },
 });
 
+function timestamp() {
+  return new Date().toISOString();
+}
+
+function log(message) {
+  console.log(`[${timestamp()}] ${message}`);
+}
+
+function logError(message, error) {
+  console.error(`[${timestamp()}] ${message}`, error);
+}
+
 function buildRabbitMqLambdaPayload(queue, message) {
   const body = message.content.toString("base64");
   const properties = message.properties || {};
@@ -94,19 +106,19 @@ async function main() {
         }
 
         try {
-          console.log(`Mensagem recebida do RabbitMQ | Queue: ${queue}`);
+          log(`Mensagem recebida do RabbitMQ | Queue: ${queue}`);
           await invokeLambda(queue, message);
           channel.ack(message);
-          console.log(`Mensagem processada pela Lambda e ACK enviada | Queue: ${queue}`);
+          log(`Mensagem processada pela Lambda e ACK enviada | Queue: ${queue}`);
         } catch (error) {
-          console.error(`Erro ao invocar Lambda para ${queue}:`, error);
+          logError(`Erro ao invocar Lambda para ${queue}:`, error);
           channel.nack(message, false, true);
         }
       },
       { noAck: false },
     );
 
-    console.log(`Trigger RabbitMQ -> Lambda ativo | Queue: ${queue}`);
+    log(`Trigger RabbitMQ -> Lambda ativo | Queue: ${queue}`);
   }
 
   process.on("SIGTERM", async () => {
@@ -117,6 +129,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error);
+  logError("Erro fatal no trigger RabbitMQ -> Lambda:", error);
   process.exit(1);
 });
