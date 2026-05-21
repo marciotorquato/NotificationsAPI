@@ -3,11 +3,12 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $scriptPath = Join-Path $repoRoot "scripts\rabbitmq-lambda-trigger.js"
 
-docker compose -f (Join-Path $repoRoot "docker-compose.yml") up -d localstack rabbitmq
+$orchestrationCompose = Join-Path $repoRoot "..\OrchestrationApi\docker-compose.yml"
+docker compose -f $orchestrationCompose up -d localstack rabbitmq
 
 docker run --rm `
     --name notifications-rabbitmq-lambda-trigger `
-    --network fiap-notifications-local `
+    --network orchestrationapi_default `
     -v "${scriptPath}:/app/rabbitmq-lambda-trigger.js:ro" `
     -e RABBITMQ_URL="amqp://admin:admin@rabbitmq:5672/%2F" `
     -e LAMBDA_ENDPOINT="http://localstack:4566" `
