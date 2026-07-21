@@ -2,14 +2,20 @@
 
 Microsservico responsavel pelo envio de notificacoes da plataforma FIAP Cloud Games.
 
-Nesta versao, a NotificationsAPI nao roda mais como um container de worker continuamente ativo. O processamento foi migrado para uma funcao serverless (`NotificationsAPI.Function`) publicada no LocalStack e acionada por mensagens do RabbitMQ.
+Este repositorio contem **duas formas de execucao, de proposito**:
+
+- **Producao/Cloud:** processamento serverless via **AWS Lambda** (`NotificationsAPI.Function`), acionado por mensagens do RabbitMQ. Este e o caminho oficial da arquitetura.
+- **Dev/Teste local em Kubernetes:** o projeto `NotificationsAPI.Api` (worker tradicional em container) e os manifestos em `k8s/` permitem rodar o servico localmente sem depender do LocalStack, util para desenvolvimento e testes rapidos. Esse caminho **nao substitui** o serverless — e um modo alternativo, mais leve, apenas para ambiente local.
 
 ## Tecnologias
 
 - .NET 9
-- AWS Lambda custom runtime no LocalStack
+- AWS Lambda custom runtime (producao) / LocalStack (simulacao local do Lambda)
+- Kubernetes — execucao alternativa em container para dev/teste local
 - RabbitMQ como broker de mensageria
 - SQL Server para persistencia
+- MongoDB (logs via Serilog)
+- Terraform — provisionamento da infraestrutura Lambda/IAM/S3 na AWS
 - Serilog para logs
 
 Observacao: referencias nao utilizadas de AutoMapper foram removidas para eliminar o alerta NuGet `NU1903` de vulnerabilidade no pacote `AutoMapper 12.0.1`.
@@ -41,13 +47,17 @@ No AWS real, o desenho equivalente usa Lambda Event Source Mapping para Amazon M
 
 ## Rodando Localmente
 
-### Pre-requisitos
+Existem duas formas de rodar o servico localmente — escolha conforme o objetivo.
+
+### Opcao A — Serverless (LocalStack), simula o ambiente de producao
+
+**Pre-requisitos**
 
 - Docker Desktop em execucao
 - PowerShell
 - Acesso para baixar imagens Docker na primeira execucao
 
-### 1. Deploy da Lambda no LocalStack
+**1. Deploy da Lambda no LocalStack**
 
 ```powershell
 .\scripts\build-deploy-localstack.ps1
@@ -61,7 +71,7 @@ Esse script:
 - cria ou atualiza a Lambda `notifications-api-function` no LocalStack.
 - configura a connection string da Lambda para usar SQL Server no Docker.
 
-### 2. Iniciar o trigger RabbitMQ -> Lambda
+**2. Iniciar o trigger RabbitMQ -> Lambda**
 
 ```powershell
 .\scripts\start-rabbitmq-lambda-trigger.ps1
@@ -69,7 +79,7 @@ Esse script:
 
 Deixe esse processo aberto durante os testes locais. Ele representa o poller gerenciado que a AWS executa por tras do Event Source Mapping de Amazon MQ/RabbitMQ.
 
-### 3. Enviar mensagens de teste
+**3. Enviar mensagens de teste**
 
 Em outro terminal:
 
@@ -78,6 +88,48 @@ Em outro terminal:
 ```
 
 O script publica mensagens nos exchanges RabbitMQ. O trigger local consome, invoca a Lambda e envia ACK somente quando a funcao processa com sucesso.
+
+### Opcao B — Container tradicional (Kubernetes), para dev/teste rapido
+
+Alternativa mais leve para quem nao precisa simular o Lambda: sobe a `NotificationsAPI.Api` como um Deployment comum.
+
+**Pre-requisitos**
+
+- Docker Desktop com Kubernetes habilitado
+- `kubectl` disponivel no terminal
+- Infraestrutura base (RabbitMQ, SQL Server) ja aplicada via OrchestrationAPI
+
+**Estrutura dos manifestos**
+
+```
+NotificationsAPI/
+└── k8s/
+    ├── configmap.yaml  ← variaveis nao sensiveis
+    ├── secret.yaml     ← variaveis sensiveis (Base64) — repositorio deve conter apenas placeholders
+    ├── deployment.yaml ← gerencia os Pods
+    └── service.yaml    ← expoe o servico (NodePort, uso local apenas)
+```
+
+> 🔒 Assim como no UsersAPI, o `secret.yaml` deste repositorio nunca deve conter valores reais commitados. As credenciais reais sao aplicadas diretamente no cluster (`kubectl create secret`) ou geridas via GitHub Secrets/Azure Key Vault, nunca versionadas.
+
+**Aplicar os manifestos**
+
+```bash
+kubectl apply -f k8s/
+```
+
+**Verificar se esta rodando**
+
+```bash
+kubectl get pods
+kubectl get services
+```
+
+**Parar o servico**
+
+```bash
+kubectl delete -f k8s/
+```
 
 ## SQL Server
 
@@ -88,21 +140,23 @@ A NotificationsAPI persiste as notificacoes no SQL Server usando Entity Framewor
 - Porta interna Docker: `1433`
 - Banco: `MS_NotificationsAPI`
 - Usuario: `sa`
-- Senha: `Fiap@12345`
+- Senha: definida na variavel de ambiente `MSSQL_SA_PASSWORD` (ver `.env` local — nunca commitar o valor real)
 
 Connection string usada pela Lambda no LocalStack:
 
 ```text
-Server=sqlserver,1433;Database=MS_NotificationsAPI;User Id=sa;Password=Fiap@12345;TrustServerCertificate=True
+Server=sqlserver,1433;Database=MS_NotificationsAPI;User Id=sa;Password=<SUA_SENHA_AQUI>;TrustServerCertificate=True
 ```
+
+> 🔒 O valor real da senha deve vir de uma variavel de ambiente/arquivo `.env` **ignorado pelo Git**, nunca escrito diretamente em `docker-compose.yml`, `appsettings.json` ou neste README.
 
 O nome `sqlserver` funciona porque a Lambda executa na rede Docker `fiap-notifications-local`.
 
 ## RabbitMQ
 
 - Management UI: `http://localhost:15672`
-- Usuario: `admin`
-- Senha: `admin`
+- Usuario: definido na variavel de ambiente `RABBITMQ_DEFAULT_USER`
+- Senha: definida na variavel de ambiente `RABBITMQ_DEFAULT_PASS` (nunca commitar o valor real)
 
 ## Validacao do LocalStack
 
@@ -166,3 +220,7 @@ O handler da funcao usa o payload oficial de RabbitMQ para Lambda:
 ```
 
 Isso mantem a funcao alinhada ao formato esperado por Amazon MQ/RabbitMQ em Lambda, enquanto o ambiente local usa LocalStack para execucao da funcao e RabbitMQ local como broker.
+
+## 🎓 Contexto Academico
+
+Desenvolvido para o **Tech Challenge — PosTech FIAP**, Arquitetura de Software em .NET com Azure.
